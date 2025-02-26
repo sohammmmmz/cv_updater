@@ -94,16 +94,16 @@ task3 = Task(
 
 task4 = Task(
     description=(
-        'Update ONLY the Skills section in the LaTeX CV by incorporating missing keywords from the job description. '
-        'Make minimal changes to existing skill categories without altering their order or formatting. '
-        'Only modify Experience entries if new skills directly match mentioned projects/technologies. '
-        'Preserve all LaTeX commands, spacing, comments, and document structure exactly as in the original template. '
-        'Never alter headers, objective, education, or other non-skill sections.'
+        'Modify the CV by updating the skills section with missing keywords that align with the '
+        "original CV's domain. Optionally, integrate relevant keywords into the experience section "
+        'if they match existing projects. Preserve the original LaTeX structure and return the '
+        'updated LaTeX code.'
     ),
     agent=cv_processor,
-    context=[task1, task3],
-    expected_output="LaTeX CV with identical structure to input, only modifying Skills section content"
+    context=[task1, task3],  # Uses CV analysis (Task 1) and missing keywords (Task 3)
+    expected_output="Modified LaTeX CV code"
 )
+
 # Create the crew
 crew = Crew(
     agents=[cv_processor, job_analyzer, matcher],
@@ -147,36 +147,20 @@ if st.button("Customize CV"):
                 # Access task outputs, but be aware they might not be in the expected format
                 # You'll need to parse them based on what the agents actually return
                 try:
-                    # Extract the rating from task3 output
-                    rating = "N/A"
+                    # Try to get rating from task3 output - handle different possible formats
                     if hasattr(task3, 'output') and task3.output:
-                        # The TaskOutput object in CrewAI has both .raw and .value properties
-                        if hasattr(task3.output, 'raw'):
-                            raw_output = task3.output.raw
-                            # Try to extract rating from raw output
-                            if isinstance(raw_output, dict) and 'rating' in raw_output:
-                                rating = raw_output['rating']
-                            elif hasattr(raw_output, 'rating'):
-                                rating = raw_output.rating
-                            elif isinstance(raw_output, str):
-                                # Try to find a rating pattern in the string
-                                import re
-                                rating_match = re.search(r'rating[:\s]+(\d+)', raw_output, re.IGNORECASE)
-                                if rating_match:
-                                    rating = rating_match.group(1)
-                        
-                    # Extract the modified CV from task4 output
-                    modified_cv = "Error retrieving modified CV"
-                    if hasattr(task4, 'output') and task4.output:
-                        # Get the string representation of the TaskOutput
-                        if hasattr(task4.output, 'raw'):
-                            modified_cv = str(task4.output.raw)
-                        elif hasattr(task4.output, 'value'):
-                            modified_cv = str(task4.output.value)
+                        if isinstance(task3.output, dict) and 'rating' in task3.output:
+                            rating = task3.output['rating']
+                        elif hasattr(task3.output, 'rating'):
+                            rating = task3.output.rating
                         else:
-                            # Fallback to string representation
-                            modified_cv = str(task4.output)
-                            
+                            # Fallback - try to extract from string or use a default
+                            rating = "N/A"
+                    else:
+                        rating = "N/A"
+                        
+                    # Similar logic for modified CV
+                    modified_cv = task4.output if hasattr(task4, 'output') else "Error retrieving modified CV"
                 except Exception as e:
                     st.warning(f"Could not extract some results: {e}")
                     rating = "N/A"
@@ -190,11 +174,6 @@ if st.button("Customize CV"):
         # Display Results
         st.metric(label="Fit Rating", value=f"{rating}/10" if rating != "N/A" else rating)
         st.code(modified_cv, language='latex')
-        
-        # Ensure modified_cv is a string for the download button
-        if not isinstance(modified_cv, str):
-            modified_cv = str(modified_cv)
-            
         st.download_button(
             label="Download Modified CV",
             data=modified_cv,

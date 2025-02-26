@@ -1,16 +1,30 @@
 # Import required libraries
-from crewai import Agent, Task, Crew
-from langchain_groq import Groq
+import streamlit as st
+from crewai import Agent, Task, Crew,LLM
+# from langchain_groq import ChatGroq  # Updated import based on common usage
 from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
-GROQ_API_KEY = os.getenv('GROQ_API')
-     
+llm = LLM(
+    model="groq/llama-3.3-70b-versatile",
+    api_key="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"
+)
+ 
+llm1 = LLM(
+    model="groq/llama-3.3-70b-versatile",
+    api_key="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"
+)
+ 
+llm2 = LLM(
+    model="groq/llama-3.3-70b-versatile",
+    api_key="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"
+)
+   # Ensure the key name matches your .env file
+
 # Initialize Groq LLM
-llm = Groq(api_key=GROQ_API_KEY)
+# llm = ChatGroq(api_key=GROQ_API_KEY, model="mixtral-8x7b-32768")  # Specify a model if needed
 
 # Define structured output models using Pydantic
 class CVAnalysis(BaseModel):
@@ -38,7 +52,7 @@ job_analyzer = Agent(
     role='Job Analyzer',
     goal='Extract key requirements from job descriptions',
     backstory='Specialist in interpreting job postings and identifying critical skills',
-    llm=llm,
+    llm=llm1,
     verbose=True
 )
 
@@ -46,7 +60,7 @@ matcher = Agent(
     role='Matcher',
     goal='Evaluate CV fit for jobs and suggest enhancements',
     backstory='Experienced in recruitment and candidate-job matching',
-    llm=llm,
+    llm=llm2,
     verbose=True
 )
 
@@ -100,37 +114,53 @@ crew = Crew(
     verbose=True  # Enable detailed logging for debugging
 )
 
-# Example usage
-if __name__ == "__main__":
-    # Sample inputs (replace with actual LaTeX CV and job description)
-    cv_latex = """
-    \\documentclass{article}
-    \\begin{document}
-    \\section{Skills}
-    \\begin{itemize}
-        \\item Python
-        \\item Java
-    \\end{itemize}
-    \\section{Experience}
-    \\begin{itemize}
-        \\item Project A: Developed a tool using Python.
-    \\end{itemize}
-    \\end{document}
-    """
-    job_desc = """
-    We are looking for a software engineer proficient in Python, Machine Learning, and AWS.
-    Experience with TensorFlow and cloud-based projects is a plus.
-    """
+# Streamlit Frontend
+st.title("CV Customizer")
 
-    # Run the crew with inputs
-    result = crew.kickoff(inputs={'cv_latex': cv_latex, 'job_description': job_desc})
+st.write(
+    "This tool helps you optimize your LaTeX resume for a specific job description by analyzing "
+    "and suggesting improvements."
+)
 
-    # Note: CrewAI's exact output structure may vary; adjust based on actual API behavior
-    # Assuming result provides access to task outputs
-    rating = result.tasks[2].output.rating  # Task 3 output (FitAssessment)
-    modified_cv = result.tasks[3].output    # Task 4 output (str)
+# Input Sections
+st.header("Input Your CV")
+cv_latex = st.text_area(
+    "",
+    height=300,
+    placeholder="\\documentclass{article}\n\\begin{document}\n...\n\\end{document}",
+    key="cv_input"
+)
 
-    # Display results
-    print(f"Original CV Fit Rating: {rating}/10")
-    print("\nModified CV:")
-    print(modified_cv)
+st.header("Input the Job Description")
+job_desc = st.text_area(
+    "",
+    height=200,
+    placeholder="We are looking for a software engineer with experience in...",
+    key="job_input"
+)
+
+# Customize CV Button and Processing Logic
+if st.button("Customize CV"):
+    if cv_latex and job_desc:
+        with st.spinner("Analyzing and customizing your CV..."):
+            try:
+                inputs = {'cv_latex': cv_latex, 'job_description': job_desc}
+                crew.kickoff(inputs=inputs)
+                rating = task3.output.rating
+                modified_cv = task4.output
+            except Exception as e:
+                st.error(f"An error occurred: {e}")
+                st.stop()
+        st.success("Customization complete!")
+
+        # Display Results
+        st.metric(label="Fit Rating", value=f"{rating}/10")
+        st.code(modified_cv, language='latex')
+        st.download_button(
+            label="Download Modified CV",
+            data=modified_cv,
+            file_name="modified_cv.tex",
+            mime="text/plain"
+        )
+    else:
+        st.error("Please provide both CV and job description.")
