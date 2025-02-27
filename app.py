@@ -31,10 +31,10 @@ llm_configs = {
         model="gemini/gemini-1.5-pro-latest",
         api_key='AIzaSyCy4KHOG5IHG1lFL1L5R9HpH8ZMDQ42TiQ'
     ),
-    # "llm4": LLM(
-    #     model="groq/llama-3.3-70b-versatile",
-    #     api_key=os.getenv("LLM_API_KEY_5")
-    # ),
+    "llm4": LLM(
+        model="ollama/deepscaler:latest",
+        base_url="http://localhost:11434"
+    ),
     # "llm5": LLM(
     #     model="groq/llama-3.3-70b-versatile",
     #     api_key=os.getenv("LLM_API_KEY_6")
@@ -71,7 +71,7 @@ cv_processor = Agent(
     role='CV Processor',
     goal='Analyze and modify the CV to align with job requirements',
     backstory='Expert in LaTeX parsing and resume optimization',
-    llm=llm_configs["llm"],
+    llm=llm_configs["llm4"],
     verbose=True,
     memory=True,
     callback=my_step_callback
@@ -81,7 +81,7 @@ job_analyzer = Agent(
     role='Job Analyzer',
     goal='Extract key requirements from job descriptions',
     backstory='Specialist in interpreting job postings and identifying critical skills',
-    llm=llm_configs["llm1"],
+    llm=llm_configs["llm4"],
     verbose=True,
     memory=True,
     callback=my_step_callback
@@ -91,7 +91,7 @@ cv_analyzer = Agent(
     role='CV Analyzer',
     goal='To analyze the CV content and structure',
     backstory='You are a experienced latex code interpretter and your task is to understand and work wit a latex code of a CV ',
-    llm=llm_configs["llm2"],
+    llm=llm_configs["llm4"],
     verbose=True,
     memory=True,
     callback=my_step_callback
@@ -101,7 +101,7 @@ matcher = Agent(
     role='Matcher',
     goal='Evaluate CV fit for jobs and suggest enhancements',
     backstory='Experienced in recruitment and candidate-job matching',
-    llm=llm_configs["llm3"],
+    llm=llm_configs["llm4"],
     verbose=True,
     memory=True,
     callback=my_step_callback
